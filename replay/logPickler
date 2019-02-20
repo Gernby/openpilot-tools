@@ -101,9 +101,9 @@ class UnloggerWorker(object):
     while len(self._readahead) > 500:
       typ, msg, route_time, cookie = self._readahead.pop()
 
-      if typ != "frame":
+      if typ != "frame": 
         data_socket.send_pyobj((cookie, typ, msg.logMonoTime, route_time), flags=zmq.SNDMORE)
-        data_socket.send(pickle.dumps(msg.as_builder().to_dict(Ordered=False)), copy=False)
+        data_socket.send(pickle.dumps(msg.as_builder().to_dict()), copy=False)
 
   def _process_commands(self, cmd, route):
     seek_to = None
