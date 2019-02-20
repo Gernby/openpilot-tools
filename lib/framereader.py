@@ -69,13 +69,14 @@ def ffprobe(fn, fmt=None):
     "-v", "quiet",
     "-print_format", "json",
     "-show_format", "-show_streams"]
-  if fmt:
-    cmd += ["-format", fmt]
+  #if fmt:
+  #  cmd += ["-format", fmt]
   cmd += [fn]
 
   try:
     ffprobe_output = subprocess.check_output(cmd)
   except subprocess.CalledProcessError as e:
+    print(e)
     raise DataUnreadableError(fn)
 
   return json.loads(ffprobe_output)

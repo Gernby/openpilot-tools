@@ -4,7 +4,11 @@ from common.basedir import BASEDIR
 os.environ['BASEDIR'] = BASEDIR
 import argparse
 import zmq
+import json
+import pickle
+import jsonpickle
 import pygame
+#import capnp-json
 import numpy as np
 import cv2
 import sys
@@ -324,6 +328,7 @@ def ui_thread(addr, frame_address):
     top_down = top_down_surface, lid_overlay
 
     # ***** frame *****
+    #fpkt = pickle.loads(frame.recv()) # recv_one(frame))
     fpkt = recv_one(frame)
     yuv_img = fpkt.frame.image
 
@@ -363,19 +368,28 @@ def ui_thread(addr, frame_address):
 
 
     # ***** live100 *****
-    l100 = recv_one_or_none(live100)
+    try:
+      #temp = pickle.loads(live100.recv(zmq.NOBLOCK)) # recv_one_or_none(live100)
+      l100 = pickle.loads(live100.recv(zmq.NOBLOCK))['live100']
+      print(l100)
+    except:
+      l100 = None
+    print (l100)
     if l100 is not None:
-      v_ego = l100.live100.vEgo
-      angle_steers = l100.live100.angleSteers
-      angle_offset = l100.live100.angleOffset
-      curvature = l100.live100.curvature
-      v_pid = l100.live100.vPid
-      enabled = l100.live100.enabled
-      alert_text1 = l100.live100.alertText1
-      alert_text2 = l100.live100.alertText2
-      long_control_state = l100.live100.longControlState
+      v_ego = l100['vEgo']
+      angle_steers = l100.angleSteers
+      angle_offset = l100.angleOffset
+      curvature = l100.curvature
+      v_pid = l100.vPid
+      enabled = l100.enabled
+      alert_text1 = l100.alertText1
+      alert_text2 = l100.alertText2
+      long_control_state = l100.longControlState
 
-    cs = recv_one_or_none(carState)
+    try:
+      cs = pickle.loads(carState.recv(zmq.NOBLOCK)) # recv_one_or_none(carState)
+    except:
+      pass
     if cs is not None:
       gas = cs.carState.gas
       brake_lights = cs.carState.brakeLights
@@ -383,7 +397,10 @@ def ui_thread(addr, frame_address):
       brake = cs.carState.brake
       v_cruise = cs.carState.cruiseState.speed
 
-    cc = recv_one_or_none(carControl)
+    try:
+      cc = pickle.loads(carControl.recv(zmq.NOBLOCK)) # recv_one_or_none(carControl)
+    except:
+      pass
     if cc is not None:
       v_override = cc.carControl.cruiseControl.speedOverride
       computer_brake = cc.carControl.actuators.brake
@@ -392,7 +409,10 @@ def ui_thread(addr, frame_address):
       angle_steers_des = cc.carControl.actuators.steerAngle
       accel_override = cc.carControl.cruiseControl.accelOverride
 
-    p = recv_one_or_none(plan)
+    try:
+      p = pickle.loads(plan.recv(zmq.NOBLOCK)) # recv_one_or_none(plan)
+    except:
+      pass
     if p is not None:
       a_target = p.plan.aTarget
       plan_source = p.plan.longitudinalPlanSource
@@ -416,7 +436,10 @@ def ui_thread(addr, frame_address):
     # ***** model ****
 
     # live model
-    md = recv_one_or_none(model)
+    try:
+      md = pickle.loads(model.recv(zmq.NOBLOCK)) # recv_one_or_none(model)
+    except:
+      pass
     if md:
       model_data = extract_model_data(md)
 
@@ -425,23 +448,33 @@ def ui_thread(addr, frame_address):
                  top_down)
 
     if test_model is not None:
-      test_md = recv_one_or_none(test_model)
-      if test_md:
-        test_model_data = extract_model_data(test_md)
+      try:
+        test_md = pickle.loads(test_model.recv(zmq.NOBLOCK)) # recv_one_or_none(test_model)
+        if test_md:
+          test_model_data = extract_model_data(test_md)
+      except:
+        pass
 
     if test_model_data:
       plot_model(test_model_data, VM, v_ego, curvature, imgw_test_model,
                  calibration, top_down, 215)
 
     # MPC
-    mpc = recv_one_or_none(liveMpc)
-    if mpc:
-      draw_mpc(mpc, top_down)
+    try:
+      mpc = pickle.loads(liveMpc.recv(zmq.NOBLOCK)) # recv_one_or_none(liveMpc)
+      if mpc:
+        draw_mpc(mpc, top_down)
+    except:
+      pass
 
     # **** tracks *****
 
     # draw all radar points
-    lt = recv_one_or_none(liveTracks)
+    try:
+      lt = pickle.loads(liveTracks.recv(zmq.NOBLOCK)) # recv_one_or_none(liveTracks)
+    except:
+      pass
+
     if lt is not None:
       good_lt = lt
     if good_lt is not None:
@@ -450,7 +483,10 @@ def ui_thread(addr, frame_address):
     # ***** live20 *****
 
     # live l20 from drived
-    l20 = recv_one_or_none(live20)
+    try:
+      l20 = pickle.loads(live20.recv(zmq.NOBLOCK)) # recv_one_or_none(live20)
+    except:
+      pass
     if l20 is not None:
       d_rel = l20.live20.leadOne.dRel + RDR_TO_LDR
       y_rel = l20.live20.leadOne.yRel
@@ -459,7 +495,10 @@ def ui_thread(addr, frame_address):
       y_rel2 = l20.live20.leadTwo.yRel
       lead_status2 = l20.live20.leadTwo.status
 
-    lcal = recv_one_or_none(liveCalibration)
+    try:
+      lcal = pickle.loads(liveCalibration.recv(zmq.NOBLOCK)) # recv_one_or_none(liveCalibration)
+    except:
+      pass
     if lcal is not None:
       calibration_message = lcal.liveCalibration
       extrinsic_matrix = np.asarray(calibration_message.extrinsicMatrix).reshape(3, 4)

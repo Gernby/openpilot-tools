@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import argparse
+import pickle
+import json
 import os
 import sys
 import zmq
@@ -99,24 +101,11 @@ class UnloggerWorker(object):
   def _send_logs(self, data_socket):
     while len(self._readahead) > 500:
       typ, msg, route_time, cookie = self._readahead.pop()
-      smsg = msg.as_builder()
-
-      if typ == "frame":
-        frame_id = msg.frame.frameId
-
-        # Frame exists, make sure we have a framereader.
-        # load the frame readers as needed
-        s1 = time.time()
-        img = self._frame_reader.get(frame_id, pix_fmt="yuv420p")
-        fr_time = time.time() - s1
-        if fr_time > 0.05:
-          print "FRAME(%d) LAG -- %.2f ms" % (frame_id, fr_time*1000.0)
-
-        if img is not None:
-          smsg.frame.image = img.tobytes()
-
-      data_socket.send_pyobj((cookie, typ, msg.logMonoTime, route_time), flags=zmq.SNDMORE)
-      data_socket.send(smsg.to_bytes(), copy=False)
+      if typ != "frame" and typ != "can": 
+        data_socket.send_pyobj((cookie, typ, msg.logMonoTime, route_time), flags=zmq.SNDMORE)
+        #data_socket.send(smsg.to_bytes(), copy=False)
+        #data_socket.send(pickle.dumps(msg.as_builder().to_dict()), copy=False)
+        data_socket.send(json.dumps(msg.as_builder().to_dict(),ensure_ascii=False),copy=False)
 
   def _process_commands(self, cmd, route):
     seek_to = None
